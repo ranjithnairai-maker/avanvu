@@ -6,7 +6,9 @@ import { LIMITS } from '../http/ratelimit';
 import type { AppDeps, AppEnv } from './context';
 import { registerBasicRoutes } from './routes/basic';
 import { registerInternalRoutes } from './internal';
+import { registerAccountRoutes } from './routes/account';
 import { registerEventRoutes } from './routes/events';
+import { constantTimeEqual, parseRevenueCatWebhook, recordRevenueCatEvent } from '../domain/entitlements';
 import { registerIntakeRoutes } from './routes/intake';
 import { registerSessionRoutes } from './routes/sessions';
 
@@ -53,6 +55,18 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
 
   app.get('/healthz', (c) => c.json({ ok: true }));
 
+  // RevenueCat webhook: triggers a sync, never trusted for state. Duplicates are ignored by vendor id.
+  app.post('/webhooks/revenuecat', async (c) => {
+    if (!constantTimeEqual(c.req.header('Authorization') ?? '', deps.webhookAuth)) {
+      return c.json(new AvanvuError('UNAUTHENTICATED', 'Not allowed.').toBody(c.get('requestId')), 401);
+    }
+    const ev = parseRevenueCatWebhook(await c.req.json().catch(() => null));
+    if (!ev) return c.json({ ok: true, ignored: true });
+    const outboxId = await recordRevenueCatEvent(deps.db, ev);
+    if (outboxId) await deps.dispatcher.dispatchAfterCommit([outboxId]);
+    return c.json({ ok: true });
+  });
+
   // Authenticated API.
   const api = new Hono<AppEnv>();
   api.use(
@@ -78,6 +92,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
     intakeTimeoutMs: deps.intakeTimeoutMs,
   });
   registerSessionRoutes(api, deps);
+  registerAccountRoutes(api, deps);
   app.route('/v1', api);
   if (deps.internal) registerInternalRoutes(app, { ...deps.internal, dispatcher: deps.dispatcher });
   return app;

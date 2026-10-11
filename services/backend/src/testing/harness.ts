@@ -10,6 +10,7 @@ import { RateLimiter } from '../http/ratelimit';
 import { Logger } from '../observability/logger';
 import { FakeLlm } from '../ports/llm';
 import { MemoryStorage } from '../ports/storage';
+import { FakeApple, FakeRevenueCat } from '../ports/vendors';
 import { InProcessQueue } from '../ports/queue';
 import { OutboxDispatcher } from '../domain/outbox';
 import { CostGuard } from '../domain/sessions';
@@ -30,6 +31,8 @@ export interface Harness {
   llm: FakeLlm;
   kms: LocalKms;
   storage: MemoryStorage;
+  apple: FakeApple;
+  revenuecat: FakeRevenueCat;
   queue: InProcessQueue;
   dispatcher: OutboxDispatcher;
   sealer: Sealer;
@@ -74,6 +77,8 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
   const now = () => new Date(clock.now);
   const llm = new FakeLlm();
   const storage = new MemoryStorage(now);
+  const apple = new FakeApple();
+  const revenuecat = new FakeRevenueCat();
   const queue = new InProcessQueue();
   const dispatcher = new OutboxDispatcher(db.api, queue, logger, now);
   const costGuard = new CostGuard(db.api, 50, now);
@@ -87,6 +92,9 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     logger,
     llm,
     storage,
+    apple,
+    revenuecat,
+    webhookAuth: 'Bearer test-webhook-secret',
     dispatcher,
     costGuard,
     intakeTimeoutMs: 40_000,
@@ -131,6 +139,8 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     llm,
     kms,
     storage,
+    apple,
+    revenuecat,
     queue,
     dispatcher,
     sealer,

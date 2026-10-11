@@ -4,6 +4,7 @@
  * properties; lengths and counts are not enforced by the API and are checked by Zod after the call.
  */
 import { z } from 'zod';
+import { debriefOutputSchema } from './debrief';
 import { intakeTurnOutputSchema } from './intake';
 import { judgementSchema } from './judge';
 import { sessionTimelineSchema } from './timeline';
@@ -16,3 +17,4 @@ const toSchema = (schema: z.ZodType): Record<string, unknown> => {
 export const intakeTurnJsonSchema = () => toSchema(intakeTurnOutputSchema);
 export const timelineJsonSchema = () => toSchema(sessionTimelineSchema);
 export const judgementJsonSchema = () => toSchema(judgementSchema);
+export const debriefJsonSchema = () => toSchema(debriefOutputSchema);

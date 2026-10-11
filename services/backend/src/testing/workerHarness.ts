@@ -12,6 +12,7 @@ import {
 import { DbDataKeyProvider } from '../security/keys';
 import { Sealer } from '../security/seal';
 import { FakePush } from '../ports/push';
+import { FakeAccountVendors } from '../ports/vendors';
 import { OutboxDispatcher } from '../domain/outbox';
 import { Renderer } from '../render/renderer';
 import { createWorkerApp } from '../worker/app';
@@ -41,6 +42,7 @@ export interface WorkerHarness {
   worker: RenderWorker;
   app: ReturnType<typeof createWorkerApp>;
   push: FakePush;
+  vendors: FakeAccountVendors;
   tts: TtsProvider;
   /** Deliver a task to the worker app with a valid OIDC token. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,6 +85,8 @@ export async function createWorkerHarness(
     serviceAccountEmail: INVOKER,
     keys: createLocalJWKSet({ keys: [jwk] }),
   });
+  const vendors = new FakeAccountVendors();
+  const dispatcher = new OutboxDispatcher(h.db.worker, h.queue, h.deps.logger, h.deps.now);
   const app = createWorkerApp({
     auth,
     worker,
@@ -90,6 +94,27 @@ export async function createWorkerHarness(
     push,
     logger: h.deps.logger,
     now: h.deps.now,
+    account: {
+      revenuecat: h.revenuecat,
+      deletion: {
+        db: h.db.worker,
+        sealer,
+        storage: h.storage,
+        apple: h.apple,
+        revenuecat: h.revenuecat,
+        vendors,
+        logger: h.deps.logger,
+        now: h.deps.now,
+      },
+      export: {
+        db: h.db.worker,
+        sealer,
+        storage: h.storage,
+        dispatcher,
+        logger: h.deps.logger,
+        now: h.deps.now,
+      },
+    },
   });
 
   const oidc = async (email = INVOKER, audience = WORKER_URL) =>
@@ -135,5 +160,5 @@ export async function createWorkerHarness(
     h.llm.fallback('judge', () => ({ checks: JUDGE_CHECK_IDS.map((id) => ({ id, pass: true, note: '' })) }));
   };
 
-  return { worker, app, push, tts, deliver, drain, scriptFor };
+  return { worker, app, push, vendors, tts, deliver, drain, scriptFor };
 }

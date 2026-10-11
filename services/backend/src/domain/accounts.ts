@@ -3,7 +3,7 @@
  * (id = Supabase auth user id) and writes the lifetime free grants (CONTRACTS §11).
  */
 import { AvanvuError } from '@avanvu/core';
-import { withUserTx, type Db, type Tx } from '../db/tx';
+import { withSystemTx, withUserTx, type Db, type Tx } from '../db/tx';
 
 export interface FreeGrantConfig {
   FREE_TRAINING_GRANT: number;
@@ -100,6 +100,18 @@ export class AccountGuard {
     if (hit && this.now().getTime() - hit.at < this.ttlMs) {
       if (hit.deleted) throw new AvanvuError('ACCOUNT_DELETED', 'This account has been deleted.');
       return null; // cached healthy: the row was loaded on an earlier request
+    }
+    // A completed deletion removes the user row, but an unexpired token must never recreate the account.
+    const erased = await withSystemTx(this.db, 'api_system', (trx) =>
+      trx
+        .selectFrom('app.deletion_ledger')
+        .select('user_id')
+        .where('user_id', '=', userId)
+        .executeTakeFirst(),
+    );
+    if (erased) {
+      this.cache.set(userId, { deleted: true, at: this.now().getTime() });
+      throw new AvanvuError('ACCOUNT_DELETED', 'This account has been deleted.');
     }
     const row = await ensureUser(this.db, userId, this.cfg, this.now());
     this.cache.set(userId, { deleted: row.deleted_at !== null, at: this.now().getTime() });

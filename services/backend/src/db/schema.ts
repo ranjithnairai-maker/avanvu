@@ -328,6 +328,51 @@ export interface NotificationDeliveriesTable {
   sent_at: Ts | null;
 }
 
+export interface AppleTokensTable {
+  user_id: string;
+  refresh_token_enc: Bytes;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface DeletionJobsTable {
+  id: Generated<string>;
+  user_id: string;
+  state: Generated<'queued' | 'running' | 'completed' | 'failed'>;
+  steps: Generated<Json>;
+  attempt: Generated<number>;
+  updated_at: Generated<Date>;
+}
+
+export interface DeletionLedgerTable {
+  user_id: string;
+  deleted_at: Ts;
+}
+
+export interface ExportJobsTable {
+  id: Generated<string>;
+  user_id: string;
+  state: Generated<'queued' | 'running' | 'ready' | 'failed' | 'expired'>;
+  storage_path: string | null;
+  expires_at: Ts | null;
+  attempt: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface EventDebriefsTable {
+  id: Generated<string>;
+  user_id: string;
+  event_id: string;
+  overall: number;
+  cue_helped: 'yes' | 'somewhat' | 'no' | 'not_used' | null;
+  answers_enc: Bytes;
+  proposals_enc: Bytes | null;
+  confirmed_items: Json | null;
+  created_at: Generated<Date>;
+  confirmed_at: Ts | null;
+}
+
 export interface DB {
   'app.users': UsersTable;
   'app.consent_records': ConsentRecordsTable;
@@ -355,6 +400,11 @@ export interface DB {
   'app.vendor_usage': VendorUsageTable;
   'app.safety_events': SafetyEventsTable;
   'app.webhook_events': WebhookEventsTable;
+  'app.apple_tokens': AppleTokensTable;
+  'app.deletion_jobs': DeletionJobsTable;
+  'app.deletion_ledger': DeletionLedgerTable;
+  'app.export_jobs': ExportJobsTable;
+  'app.event_debriefs': EventDebriefsTable;
   'app.waitlist_entries': WaitlistEntriesTable;
   'app.sport_engines': SportEnginesTable;
   'app.voice_catalog': VoiceCatalogTable;

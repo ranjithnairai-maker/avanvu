@@ -10,6 +10,7 @@ import type { LimitSpec, RateLimiter } from '../http/ratelimit';
 import type { Logger } from '../observability/logger';
 import type { LlmClient } from '../ports/llm';
 import type { Storage } from '../ports/storage';
+import type { AppleAuth, RevenueCatClient } from '../ports/vendors';
 import type { OutboxDispatcher } from '../domain/outbox';
 import type { CostGuard } from '../domain/sessions';
 import type { Scheduler } from '../domain/scheduler';
@@ -26,6 +27,10 @@ export interface AppDeps {
   logger: Logger;
   llm: LlmClient;
   storage: Storage;
+  apple: AppleAuth;
+  revenuecat: RevenueCatClient;
+  /** Value RevenueCat sends in the Authorization header of its webhook (REVENUECAT_WEBHOOK_AUTH). */
+  webhookAuth: string;
   dispatcher: OutboxDispatcher;
   costGuard: CostGuard;
   /** Server-side timeout for one intake model call (CONTRACTS §4.3 step 6). */

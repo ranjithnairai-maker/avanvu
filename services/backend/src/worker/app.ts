@@ -7,7 +7,11 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { AvanvuError } from '@avanvu/core';
 import type { Db } from '../db/tx';
+import { runDeletion, type DeletionDeps } from '../domain/deletion';
+import { syncEntitlement } from '../domain/entitlements';
+import { runExport, type ExportDeps } from '../domain/export';
 import { deliverNotification } from '../domain/push';
+import type { RevenueCatClient } from '../ports/vendors';
 import type { Logger } from '../observability/logger';
 import type { PushClient } from '../ports/push';
 import { RenderWorker } from './render';
@@ -22,6 +26,8 @@ export interface WorkerAppDeps {
   push: PushClient;
   logger: Logger;
   now: () => Date;
+  /** Account lifecycle tasks; omitted in setups that only render. */
+  account?: { deletion: DeletionDeps; export: ExportDeps; revenuecat: RevenueCatClient };
 }
 
 export function createWorkerApp(deps: WorkerAppDeps): Hono {
@@ -52,6 +58,31 @@ export function createWorkerApp(deps: WorkerAppDeps): Hono {
     const outcome = await deliverNotification(deps.db, deps.push, parsed.data.job_id, deps.now());
     // A push that reached no device is retried by the queue (up to its attempt limit).
     return c.json({ result: outcome }, outcome === 'failed' ? 503 : 200);
+  });
+
+  app.post('/tasks/entitlement-sync', async (c) => {
+    const parsed = bodySchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success || !deps.account) return c.json({ error: 'bad_request' }, 400);
+    try {
+      await syncEntitlement(deps.db, deps.account.revenuecat, parsed.data.job_id);
+      return c.json({ result: 'synced' });
+    } catch {
+      return c.json({ result: 'retry' }, 503);
+    }
+  });
+
+  app.post('/tasks/delete-account', async (c) => {
+    const parsed = bodySchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success || !deps.account) return c.json({ error: 'bad_request' }, 400);
+    const r = await runDeletion(deps.account.deletion, parsed.data.job_id);
+    return c.json({ result: r.result }, r.status as 200);
+  });
+
+  app.post('/tasks/export', async (c) => {
+    const parsed = bodySchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success || !deps.account) return c.json({ error: 'bad_request' }, 400);
+    const r = await runExport(deps.account.export, parsed.data.job_id);
+    return c.json({ result: r.result }, r.status as 200);
   });
 
   app.onError((err, c) => {

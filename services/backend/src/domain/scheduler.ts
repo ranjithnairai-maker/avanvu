@@ -271,6 +271,27 @@ export class Scheduler {
     );
     for (const o of stale) await d.storage.delete('jobs', o.path);
     out.job_chunks = stale.length;
+
+    // Exports expire after 72 hours: remove the file and mark the job.
+    const expired = await withSystemTx(d.db, 'api_system', (trx) =>
+      trx
+        .selectFrom('app.export_jobs')
+        .select(['id', 'storage_path'])
+        .where('state', '=', 'ready')
+        .where('expires_at', '<', now)
+        .execute(),
+    );
+    for (const e of expired) {
+      if (e.storage_path) await d.storage.delete('exports', e.storage_path);
+      await withSystemTx(d.db, 'api_system', (trx) =>
+        trx
+          .updateTable('app.export_jobs')
+          .set({ state: 'expired', storage_path: null })
+          .where('id', '=', e.id)
+          .execute(),
+      );
+    }
+    out.exports = expired.length;
     return out;
   }
 }

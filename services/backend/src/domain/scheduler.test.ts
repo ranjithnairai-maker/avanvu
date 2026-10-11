@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHarness, USER_A, USER_B, type Harness } from '../testing/harness';
-import { fictionalProfile, grantPro, seedCatalog, seedProfile } from '../testing/fixtures';
+import { grantPro, seedCatalog, seedProfile } from '../testing/fixtures';
 import { Scheduler } from './scheduler';
 
 let h: Harness;
