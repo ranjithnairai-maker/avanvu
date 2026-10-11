@@ -28,6 +28,7 @@ export interface Harness {
   app: Hono<AppEnv>;
   deps: AppDeps;
   llm: FakeLlm;
+  kms: LocalKms;
   storage: MemoryStorage;
   queue: InProcessQueue;
   dispatcher: OutboxDispatcher;
@@ -62,7 +63,8 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
   const clock = { now: opts.now ?? new Date('2026-10-20T12:00:00Z') };
   const logs: string[] = [];
   const logger = new Logger({ service: 'api-test' }, { write: (l) => logs.push(l) }, 'debug');
-  const sealer = new Sealer(new DbDataKeyProvider(db.api, await LocalKms.create()));
+  const kms = await LocalKms.create();
+  const sealer = new Sealer(new DbDataKeyProvider(db.api, kms));
   const config = {
     PRO_MONTHLY_ALLOWANCE: 12,
     TRIAL_SESSION_ALLOWANCE: 3,
@@ -127,6 +129,7 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     app,
     deps,
     llm,
+    kms,
     storage,
     queue,
     dispatcher,

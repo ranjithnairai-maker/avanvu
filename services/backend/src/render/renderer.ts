@@ -83,8 +83,13 @@ export interface RendererOptions {
   concurrency?: number;
   chunkRetries?: number;
   sleep?: (ms: number) => Promise<void>;
-  /** Called after each synthesized chunk is cached; used by the worker for heartbeats. */
+}
+
+/** Hooks the worker uses for heartbeats and stage changes. */
+export interface RenderHooks {
+  /** Called after each synthesized chunk is cached. */
   onProgress?: () => Promise<void> | void;
+  onStage?: (stage: 'mixing') => Promise<void> | void;
 }
 
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
@@ -121,7 +126,7 @@ export class Renderer {
     private readonly opts: RendererOptions,
   ) {}
 
-  async render(input: RenderInput): Promise<RenderOutput> {
+  async render(input: RenderInput, hooks: RenderHooks = {}): Promise<RenderOutput> {
     const { timeline, voice } = input;
     const sleep = this.opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
     const retries = this.opts.chunkRetries ?? 3;
@@ -160,7 +165,7 @@ export class Renderer {
           requestIds.push(r.providerRequestId);
           synthesized++;
           await this.storage.put('jobs', path, writeWav(inspection.pcm), 'audio/wav');
-          await this.opts.onProgress?.();
+          await hooks.onProgress?.();
           return inspection.pcm;
         } catch (e) {
           lastError = e;
@@ -205,6 +210,7 @@ export class Renderer {
         musicPath = join(dir, 'music.wav');
         await writeFile(musicPath, writeWav({ ...input.music, samples: looped }));
       }
+      await hooks.onStage?.('mixing');
       const mixed = await mixAndEncode(this.opts.ffmpegBin, {
         voicePath,
         musicPath,
