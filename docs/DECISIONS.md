@@ -97,6 +97,29 @@ Consequences: all athlete data is stored and processed in the United States; the
 Decision: the code lives at https://github.com/ranjithnairai-maker/avanvu (default branch `main`); CI runs on GitHub Actions with secret scanning enabled. The repository is public at the time of writing, so it must never contain secrets, real athlete data or `.env` files.
 Consequences: the specifications, prompts and safety lexicon are visible to anyone while the repository stays public. The founder may make it private at any time; nothing in the build depends on visibility.
 
+### D-34 — Local tooling: pnpm via npm, Node 22 target, hoisted node_modules (2026-10-11, decided)
+Context: `corepack enable` needs administrator rights on the founder's Windows machine; the machine runs Node 24 while the backend targets Node 22; Expo and pnpm's isolated layout conflict in monorepos.
+Decision: install pnpm with `npm i -g pnpm@10.18.3` (pinned in `packageManager`); `.nvmrc` and CI use Node 22, `engines` allows 22 to 24 so local Node 24 works; `.npmrc` sets `node-linker=hoisted` for Expo.
+Consequences: CI is the Node 22 source of truth. The worker image will pin Node 22.
+
+### D-35 — Temporary iOS bundle identifier for development builds (2026-10-11, decided; founder action required)
+Context: EAS needs a bundle identifier for the first development build, but D-25 (legal entity, Apple developer account type) is still open.
+Decision: `apps/mobile/app.config.ts` reads `AVANVU_BUNDLE_ID` and otherwise falls back to the placeholder `com.example.avanvu.dev`, which cannot be registered. Before the first `eas build`, the founder sets a development identifier they control in their EAS environment. The production identifier is chosen once D-25 is decided and never changes after release.
+Consequences: no production identifier is committed.
+
+### D-36 — Dictation candidate: expo-speech-recognition (2026-10-11, decided, pending spike d)
+Decision: `expo-speech-recognition` 57.1.1 (SDK 57 compatible) is installed for the dictation spike. The microphone is shown only when recognition is available, on-device recognition is supported and the `en-US` locale is installed (`dictationAvailable` in core). If the spike fails on the founder's device, drop dictation and ship text only (SPEC §4.4).
+
+### D-37 — TypeScript versions (2026-10-11, decided)
+Decision: packages and tooling use TypeScript 5.9.3. The Expo SDK 57 template pins `~6.0.3`, so `apps/mobile` keeps that and the two are checked separately by `pnpm typecheck`. Unify when SDK 58 lands.
+
+### D-38 — Seed safety lexicon (2026-10-11, decided, reviewer sign-off required)
+Context: SPEC §12.2 needs a reviewed lexicon and idiom allowlist before any model call.
+Decision: `packages/core/src/safety/lexicon.ts` ships a seed set with fictional red-team items in `lexicon.test.ts`. It is versioned (`LEXICON_VERSION`) and is **not** approved for beta. The content reviewer (D-30) finalises it; changes run the full safety eval set. Known deliberate allowlist cases include "suicide sprints" in training contexts.
+
+### D-39 — Source layout inside packages/core (2026-10-11, decided)
+Decision: modules live in `packages/core/src/` (for example `src/brand.ts`, `src/sports.ts`, `src/crypto.ts`, `src/safety/lexicon.ts`) and are exported from `src/index.ts`. The paths in CLAUDE.md and SPEC (for example `packages/core/brand.ts`) are read as "in the core package".
+
 ---
 
 ## Open (working defaults in force until the founder decides)
