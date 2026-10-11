@@ -43,6 +43,7 @@ export interface WorkerHarness {
   push: FakePush;
   tts: TtsProvider;
   /** Deliver a task to the worker app with a valid OIDC token. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   deliver(path: string, body: unknown, token?: string | null): Promise<{ status: number; json: any }>;
   /** Drain the in-process queue into the worker app. Returns the statuses seen. */
   drain(opts?: { duplicate?: boolean; maxAttempts?: number }): Promise<number[]>;
