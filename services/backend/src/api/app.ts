@@ -5,6 +5,7 @@ import { AvanvuError, ERROR_CODES } from '@avanvu/core';
 import { LIMITS } from '../http/ratelimit';
 import type { AppDeps, AppEnv } from './context';
 import { registerBasicRoutes } from './routes/basic';
+import { registerInternalRoutes } from './internal';
 import { registerEventRoutes } from './routes/events';
 import { registerIntakeRoutes } from './routes/intake';
 import { registerSessionRoutes } from './routes/sessions';
@@ -78,5 +79,6 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   });
   registerSessionRoutes(api, deps);
   app.route('/v1', api);
+  if (deps.internal) registerInternalRoutes(app, { ...deps.internal, dispatcher: deps.dispatcher });
   return app;
 }

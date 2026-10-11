@@ -12,6 +12,8 @@ import type { LlmClient } from '../ports/llm';
 import type { Storage } from '../ports/storage';
 import type { OutboxDispatcher } from '../domain/outbox';
 import type { CostGuard } from '../domain/sessions';
+import type { Scheduler } from '../domain/scheduler';
+import type { TaskAuth } from '../worker/taskauth';
 import type { Sealer, UserSealer } from '../security/seal';
 
 export interface AppDeps {
@@ -28,6 +30,8 @@ export interface AppDeps {
   costGuard: CostGuard;
   /** Server-side timeout for one intake model call (CONTRACTS §4.3 step 6). */
   intakeTimeoutMs: number;
+  /** Cloud Scheduler endpoints; omitted in unit setups that do not need them. */
+  internal?: { auth: TaskAuth; scheduler: Scheduler };
   config: Pick<
     BackendConfig,
     'PRO_MONTHLY_ALLOWANCE' | 'TRIAL_SESSION_ALLOWANCE' | 'FREE_TRAINING_GRANT' | 'FREE_PRIMER_GRANT'

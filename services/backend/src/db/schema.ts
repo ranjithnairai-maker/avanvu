@@ -219,6 +219,15 @@ export interface SafetyEventsTable {
   layer: 'deterministic' | 'model';
   outcome: 'crisis' | 'ambiguous';
   lexicon_version: string | null;
+  created_at: Generated<Date>;
+}
+
+export interface WebhookEventsTable {
+  id: Generated<string>;
+  vendor: string;
+  vendor_event_id: string;
+  received_at: Generated<Date>;
+  state: Generated<'received' | 'processed' | 'failed'>;
 }
 
 export interface WaitlistEntriesTable {
@@ -345,6 +354,7 @@ export interface DB {
   'app.rate_limit_buckets': RateLimitBucketsTable;
   'app.vendor_usage': VendorUsageTable;
   'app.safety_events': SafetyEventsTable;
+  'app.webhook_events': WebhookEventsTable;
   'app.waitlist_entries': WaitlistEntriesTable;
   'app.sport_engines': SportEnginesTable;
   'app.voice_catalog': VoiceCatalogTable;
