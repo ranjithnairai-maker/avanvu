@@ -31,17 +31,21 @@ export interface ErrorBody {
     request_id: string;
     retry_after_ms?: number;
   };
+  /** Extra safe context, for example the latest committed state on PROFILE_REVISION_CONFLICT. */
+  latest?: unknown;
 }
 
 export class AvanvuError extends Error {
   readonly code: ErrorCode;
   readonly retryAfterMs?: number;
+  readonly latest?: unknown;
 
-  constructor(code: ErrorCode, message: string, opts: { retryAfterMs?: number } = {}) {
+  constructor(code: ErrorCode, message: string, opts: { retryAfterMs?: number; latest?: unknown } = {}) {
     super(message);
     this.name = 'AvanvuError';
     this.code = code;
     if (opts.retryAfterMs !== undefined) this.retryAfterMs = opts.retryAfterMs;
+    if (opts.latest !== undefined) this.latest = opts.latest;
   }
 
   get http(): number {
@@ -61,6 +65,7 @@ export class AvanvuError extends Error {
         request_id: requestId,
         ...(this.retryAfterMs !== undefined ? { retry_after_ms: this.retryAfterMs } : {}),
       },
+      ...(this.latest !== undefined ? { latest: this.latest } : {}),
     };
   }
 }
