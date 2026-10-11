@@ -8,6 +8,8 @@ export default tseslint.config(
       '**/dist/**',
       '**/.expo/**',
       '**/.turbo/**',
+      '**/.next/**',
+      '**/next-env.d.ts',
       'eval-results/**',
       'pnpm-lock.yaml',
     ],

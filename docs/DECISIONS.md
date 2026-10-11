@@ -198,6 +198,7 @@ Decision: `AVANVU_ENV=local` uses `DevLlm` (fills fields from the athlete's word
 - **D-53** Sentry and PostHog SDKs are not installed yet. Analytics goes through the allowlisted wrapper, which is a no-op without a key.
 - **D-54** The Pro card gradient is replaced by a flat tint.
 
+- **D-55** The website (`apps/web`, Next.js 16, static pages, no third-party scripts or cookies) ships Privacy and Terms as drafts with a visible notice until `NEXT_PUBLIC_LEGAL_REVIEWED=true` is set after counsel review (SPEC 12.8). The support address comes from `NEXT_PUBLIC_SUPPORT_EMAIL` because it is undecided (D-25). Vercel project root is `apps/web`; the founder creates the project and domain.
 
 ---
 
@@ -206,3 +207,4 @@ Decision: `AVANVU_ENV=local` uses `DevLlm` (fills fields from the athlete's word
 - 2026-10-11 — Log created from the technical review; D-01 to D-16, D-31, D-32 decided; D-17 to D-30 open with defaults.
 - 2026-10-11 — D-19 decided (North Virginia) after the founder created the production Supabase project in `us-east-1`; D-33 added for the GitHub repository and CI; founder actions updated.
 - 2026-10-11 — D-49 to D-54 added from the mobile build.
+- 2026-10-11 — D-55 added for the website.
