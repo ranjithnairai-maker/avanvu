@@ -14,7 +14,8 @@
     "test:db": "echo \"test:db arrives in M2 (needs supabase CLI)\" && exit 0",
     "eval:smoke": "turbo run eval:smoke",
     "dev:backend": "pnpm --filter @avanvu/backend dev",
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "eval:full": "pnpm --filter @avanvu/evals eval:full"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
