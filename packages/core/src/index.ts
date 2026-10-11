@@ -10,3 +10,7 @@ export * from './profile';
 export * from './intake';
 export * from './timeline';
 export * from './safety/lexicon';
+export * from './judge';
+export * from './ledger';
+export * from './tts';
+export * from './config';
