@@ -15,9 +15,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      # ffmpeg-static downloads its binary in a postinstall step that pnpm skips unless allowed; make sure it ran.
+      - run: node node_modules/ffmpeg-static/install.js
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm --filter @avanvu/backend build
   secret-scan:
     runs-on: ubuntu-latest
     steps:
@@ -26,3 +29,15 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # pgTAP against the real Supabase stack (SPEC §15.1). Not yet run anywhere: it is non-blocking until it has
+  # been seen green once. The PGlite tests in `verify` already exercise the same migrations and policies.
+  database:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: 2.120.0 }
+      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,mailpit
+      - run: supabase db reset
+      - run: supabase test db

@@ -6,7 +6,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "dev": "tsx watch src/api/main.ts"
+    "dev": "AVANVU_ROLE=both tsx --env-file=../../.env src/main.ts",
+    "build": "node scripts/build.mjs",
+    "gen:sports": "tsx src/gen-sports-migration.mts > ../../supabase/migrations/20261011000002_seed_sports.sql"
   },
   "dependencies": {
     "@avanvu/core": "workspace:*",
@@ -22,6 +24,7 @@
     "@electric-sql/pglite": "0.5.8",
     "@types/node": "22.20.5",
     "@types/pg": "8.23.1",
+    "esbuild": "0.28.2",
     "ffmpeg-static": "5.3.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",

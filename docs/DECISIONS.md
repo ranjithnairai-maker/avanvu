@@ -120,6 +120,38 @@ Decision: `packages/core/src/safety/lexicon.ts` ships a seed set with fictional 
 ### D-39 — Source layout inside packages/core (2026-10-11, decided)
 Decision: modules live in `packages/core/src/` (for example `src/brand.ts`, `src/sports.ts`, `src/crypto.ts`, `src/safety/lexicon.ts`) and are exported from `src/index.ts`. The paths in CLAUDE.md and SPEC (for example `packages/core/brand.ts`) are read as "in the core package".
 
+### D-40 — ffmpeg pinned by archive hash, first-seen (2026-10-11, decided; verify before release)
+Context: the worker image must pin its ffmpeg build (CLAUDE.md 10).
+Decision: `services/backend/Dockerfile` installs the static build `ffmpeg-7.0.2-amd64-static.tar.xz` from johnvansickle.com and verifies SHA-256 `abda8d77ce8309141f83ab8edf0596834087c52467f6badf376a6a2a4c87cf67`, which is the hash of the file as first downloaded on 2026-10-11 (the vendor publishes only MD5, and its sidecar was unavailable). The Node base image is pinned to `node:22.20.0-bookworm-slim@sha256:b21fe589…`. Tests use the `ffmpeg-static` npm package (ffmpeg 6.1.1).
+Consequences: before the first production release, compare the hash with an independent source or switch to a build whose checksums the vendor signs; loudness and duration tests must pass on the production build.
+
+### D-41 — Real Postgres in tests through PGlite; pgTAP in CI (2026-10-11, decided)
+Decision: unit and integration tests run the real SQL migrations on PGlite (WASM Postgres), assuming the `avanvu_api` and `avanvu_worker` roles with `set local role`, so forced RLS, grants and constraints are exercised without Docker. `supabase/tests/database/rls.test.sql` (pgTAP) runs against the real stack in a non-blocking CI job until it has been seen green once. The Data API exposure test (SPEC §10.2) needs the Supabase stack and exists only as the `schemas` setting in `supabase/config.toml` plus the `anon`/`authenticated` privilege assertions.
+
+### D-42 — Vendor adapters are placeholders; preview and production refuse to start (2026-10-11, decided)
+Context: the founder asked for placeholders for the vendor APIs.
+Decision: every vendor sits behind a port with a fake (tests, local) and an `Unconfigured*` placeholder. `composition.ts` throws `UnimplementedAdaptersError` in `preview` and `production`, naming what is missing, instead of serving from stubs. The adapter list and order of operations are in `docs/runbooks/go-live.md`.
+
+### D-43 — Sensitive values are sealed before a transaction opens (2026-10-11, decided)
+Context: sealing may need a data-key lookup; doing that inside a transaction holds two pooled connections per request and deadlocks under load (found by a test).
+Decision: callers take a `UserSealer` from `Sealer.forUser(userId)` before any transaction and use it inside. Idempotent responses are sealed because they can contain athlete text.
+
+### D-44 — Idempotency stale takeover and replay of failures (2026-10-11, decided)
+Decision: a request still `processing` after 2 minutes is treated as crashed and can be taken over by the same key. A handler failure releases the claim so the same key can be retried. Safety interruptions (409) are stored as results so a replay returns the same answer.
+
+### D-45 — Scheduler and program details not fixed by SPEC (2026-10-11, decided)
+Decision: night-before is kept in a program while now is before 22:00 local the evening before; training sessions sit between tomorrow and three days before the event; an item whose allowance is insufficient becomes `locked` and the athlete gets one `generation_blocked` push (free users' night-before is locked silently); offline nudges are one push per (kind, session) with kinds `offline_nudge_48h` and `offline_nudge_24h`; render jobs whose task was lost are re-dispatched under a new generation after 10 minutes.
+
+### D-46 — Interview details not fixed by CONTRACTS (2026-10-11, decided)
+Decision: interview "targets reached" means every phase target in SPEC §4.2 is resolved (optional fields `objective.desired_outcome`, `objective.why_now`, `scene.smells`, and sensitive fields never block). Past a turn or time cap with the minimum unmet, the server asks only for missing essentials, at most twice each, then moves to the summary. Crisis turns retain no text. Raw intake turns are encrypted with the turn id as AAD row id. The follow-up counter increments for the path the question targets, chosen by the server from the model's `next_focus`.
+
+### D-47 — Sign in with Apple server notifications deferred (2026-10-11, decided)
+Context: SPEC §11.2 lists `POST /webhooks/apple-siwa` as *should*. Apple's notifications identify users by the Apple `sub`, which is not the Supabase user id.
+Decision: not built in this pass. It needs the Apple `sub` stored with the refresh token at link time (`POST /auth/apple/link` already receives the code) and Apple's signed-payload verification. Revisit before beta.
+
+### D-48 — Local development uses a deterministic dev model (2026-10-11, decided)
+Decision: `AVANVU_ENV=local` uses `DevLlm` (fills fields from the athlete's words, writes a valid script with the fixture builder, passes the judge), `FakeTtsProvider`, file storage and an in-process queue, so the whole loop runs with no keys. It is never constructed outside local.
+
 ---
 
 ## Open (working defaults in force until the founder decides)

@@ -1,0 +1,36 @@
+# Local Supabase stack (CLI). Production and preview are separate Supabase projects (SPEC §9.4); this file is
+# only for `supabase start` on a developer machine and in CI. Never link it to the production project for
+# migrations from a developer machine (CLAUDE.md): production changes go through a reviewed release step.
+project_id = "avanvu"
+
+[api]
+enabled = true
+port = 54321
+# The `app` schema is deliberately NOT exposed through the Data API (D-03). Never add it here.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+enabled = true
+site_url = "avanvu://"
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+otp_length = 6
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
