@@ -11,7 +11,12 @@ import {
   type EntitlementState,
 } from './ledger';
 
-const cfg = { PRO_MONTHLY_ALLOWANCE: 12, TRIAL_SESSION_ALLOWANCE: 3, FREE_TRAINING_GRANT: 1, FREE_PRIMER_GRANT: 1 };
+const cfg = {
+  PRO_MONTHLY_ALLOWANCE: 12,
+  TRIAL_SESSION_ALLOWANCE: 3,
+  FREE_TRAINING_GRANT: 1,
+  FREE_PRIMER_GRANT: 1,
+};
 const FREE = '11111111-1111-4111-8111-111111111111';
 const PRO = '22222222-2222-4222-8222-222222222222';
 const TRIAL = '33333333-3333-4333-8333-333333333333';
@@ -97,7 +102,9 @@ describe('free allowance', () => {
 
   it('refuses night-before and on-demand primers for free users but lets the scheduled primer use its grant', async () => {
     await expect(reserve(FREE, 'night_before', null)).rejects.toMatchObject({ code: 'ENTITLEMENT_REQUIRED' });
-    await expect(reserve(FREE, 'primer', null, false)).rejects.toMatchObject({ code: 'ENTITLEMENT_REQUIRED' });
+    await expect(reserve(FREE, 'primer', null, false)).rejects.toMatchObject({
+      code: 'ENTITLEMENT_REQUIRED',
+    });
     expect(await avail(FREE, 'free_primer')).toBe(1);
     await reserve(FREE, 'primer', null, true);
     expect(await avail(FREE, 'free_primer')).toBe(0);
@@ -150,7 +157,11 @@ describe('pro allowance buckets and holds', () => {
         ('${PRO}', 'f0000000-0000-4000-8000-000000000001', 'primer', '2026-10-30', '2026-10-27 08:00+00', 'planned');
     `);
     const summary = await withUserTx(t.api, PRO, (trx) => allowanceSummary(trx, PRO, ent, now));
-    expect(summary.pro).toMatchObject({ available: remaining, held_for_events: 2, available_for_on_demand: remaining - 2 });
+    expect(summary.pro).toMatchObject({
+      available: remaining,
+      held_for_events: 2,
+      available_for_on_demand: remaining - 2,
+    });
 
     for (let i = 0; i < remaining - 2; i++) await reserve(PRO, 'training', ent);
     await expect(reserve(PRO, 'training', ent)).rejects.toMatchObject({ code: 'ALLOWANCE_EXHAUSTED' });
@@ -168,7 +179,11 @@ describe('pro allowance buckets and holds', () => {
     // Drain down to exactly one left.
     for (let i = 0; i < 10; i++) await reserve(u, 'training', ent);
     expect(await avail(u, 'pro')).toBe(1);
-    const results = await Promise.allSettled([reserve(u, 'training', ent), reserve(u, 'training', ent), reserve(u, 'training', ent)]);
+    const results = await Promise.allSettled([
+      reserve(u, 'training', ent),
+      reserve(u, 'training', ent),
+      reserve(u, 'training', ent),
+    ]);
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
     expect(await avail(u, 'pro')).toBe(0);
   });

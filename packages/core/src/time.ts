@@ -51,7 +51,14 @@ export function zoneOffsetMs(instant: Date, zone: string): number {
     second: '2-digit',
   }).formatToParts(instant);
   const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  const asUtc = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour'),
+    get('minute'),
+    get('second'),
+  );
   return asUtc - Math.floor(instant.getTime() / 1000) * 1000;
 }
 

@@ -13,7 +13,12 @@ export interface FreeGrantConfig {
 /** Free grants live in one lifetime bucket from account creation. */
 export const FREE_BUCKET_END = new Date('9999-12-31T00:00:00Z');
 
-export async function writeFreeGrants(trx: Tx, userId: string, createdAt: Date, cfg: FreeGrantConfig): Promise<void> {
+export async function writeFreeGrants(
+  trx: Tx,
+  userId: string,
+  createdAt: Date,
+  cfg: FreeGrantConfig,
+): Promise<void> {
   const grants = [
     ['free_training', cfg.FREE_TRAINING_GRANT],
     ['free_primer', cfg.FREE_PRIMER_GRANT],
@@ -45,11 +50,24 @@ export interface AccountRow {
   created_at: Date;
 }
 
-export async function ensureUser(db: Db, userId: string, cfg: FreeGrantConfig, now: Date): Promise<AccountRow> {
+export async function ensureUser(
+  db: Db,
+  userId: string,
+  cfg: FreeGrantConfig,
+  now: Date,
+): Promise<AccountRow> {
   return withUserTx(db, userId, async (trx) => {
     await trx
       .insertInto('app.users')
-      .values({ id: userId, created_at: now, updated_at: now, age_assurance_method: null, age_assured_at: null, deleted_at: null, time_zone: null })
+      .values({
+        id: userId,
+        created_at: now,
+        updated_at: now,
+        age_assurance_method: null,
+        age_assured_at: null,
+        deleted_at: null,
+        time_zone: null,
+      })
       .onConflict((oc) => oc.column('id').doNothing())
       .execute();
     const row = await trx

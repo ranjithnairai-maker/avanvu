@@ -43,6 +43,7 @@ export interface EventsTable {
   user_id: string;
   name_enc: Bytes;
   starts_local: string;
+  sport_label_enc: Bytes | null;
   time_zone: string;
   starts_at: Ts;
   status: Generated<'upcoming' | 'completed' | 'canceled'>;

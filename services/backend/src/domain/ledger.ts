@@ -4,7 +4,13 @@
  * per user with an advisory lock so two concurrent requests cannot both spend the last session.
  */
 import { sql } from 'kysely';
-import { AvanvuError, proBucketFor, availableForOnDemand, trialConversionTopUp, type AllowanceType } from '@avanvu/core';
+import {
+  AvanvuError,
+  proBucketFor,
+  availableForOnDemand,
+  trialConversionTopUp,
+  type AllowanceType,
+} from '@avanvu/core';
 import type { Tx } from '../db/tx';
 import { FREE_BUCKET_END } from './accounts';
 
@@ -23,7 +29,11 @@ export interface EntitlementState {
 export type SessionContext = 'training' | 'night_before' | 'primer';
 
 export async function loadEntitlement(trx: Tx, userId: string): Promise<EntitlementState | null> {
-  const row = await trx.selectFrom('app.entitlements').selectAll().where('user_id', '=', userId).executeTakeFirst();
+  const row = await trx
+    .selectFrom('app.entitlements')
+    .selectAll()
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
   if (!row) return null;
   return {
     active: row.active,
@@ -34,7 +44,10 @@ export async function loadEntitlement(trx: Tx, userId: string): Promise<Entitlem
 }
 
 /** An entitlement grants Pro only while active and not past its expiry. */
-export function isProActive(e: EntitlementState | null, now: Date): e is EntitlementState & { original_purchase_at: Date } {
+export function isProActive(
+  e: EntitlementState | null,
+  now: Date,
+): e is EntitlementState & { original_purchase_at: Date } {
   return !!e && e.active && e.original_purchase_at !== null && (e.expires_at === null || e.expires_at > now);
 }
 
@@ -94,7 +107,10 @@ export async function ensureProGrant(
       .executeTakeFirst();
     if (!existing) {
       await grant(key, cfg.PRO_MONTHLY_ALLOWANCE);
-    } else if (existing.quantity === cfg.TRIAL_SESSION_ALLOWANCE && cfg.TRIAL_SESSION_ALLOWANCE !== cfg.PRO_MONTHLY_ALLOWANCE) {
+    } else if (
+      existing.quantity === cfg.TRIAL_SESSION_ALLOWANCE &&
+      cfg.TRIAL_SESSION_ALLOWANCE !== cfg.PRO_MONTHLY_ALLOWANCE
+    ) {
       // The trial converted inside the bucket that holds the trial grant: top up to the full allowance.
       await grant(
         `topup:${userId}:${startIso}`,
@@ -146,7 +162,11 @@ export async function allowanceSummary(
       .executeTakeFirst();
     return Number(r?.total ?? 0);
   };
-  const summary: AllowanceSummary = { free_training: await free('free_training'), free_primer: await free('free_primer'), pro: null };
+  const summary: AllowanceSummary = {
+    free_training: await free('free_training'),
+    free_primer: await free('free_primer'),
+    pro: null,
+  };
   if (isProActive(ent, now)) {
     const bucket = proBucketFor(ent.original_purchase_at, now);
     const available = await sumFor(trx, userId, 'pro', bucket.start);
@@ -209,9 +229,12 @@ export async function reserveSession(trx: Tx, input: ReserveInput): Promise<Rese
     end = bucket.end;
     const available = await sumFor(trx, userId, 'pro', start);
     // Special items consume the allowance held for them; everything else sees available minus holds.
-    spendable = fromSpecialItem ? available : availableForOnDemand(available, await heldForEvents(trx, userId, end));
+    spendable = fromSpecialItem
+      ? available
+      : availableForOnDemand(available, await heldForEvents(trx, userId, end));
   } else {
-    if (context === 'night_before') throw new AvanvuError('ENTITLEMENT_REQUIRED', 'This session needs Avanvu Pro.');
+    if (context === 'night_before')
+      throw new AvanvuError('ENTITLEMENT_REQUIRED', 'This session needs Avanvu Pro.');
     if (context === 'primer' && !fromSpecialItem) {
       throw new AvanvuError('ENTITLEMENT_REQUIRED', 'Personalized primers on demand need Avanvu Pro.');
     }

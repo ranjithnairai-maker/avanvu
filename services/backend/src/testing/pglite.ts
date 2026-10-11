@@ -60,7 +60,7 @@ export interface TestDb {
 }
 
 export async function createTestDb(): Promise<TestDb> {
-  const pg = new PGlite();
+  const pg = new PGlite({ parsers: { 1082: (v: string) => v, 1114: (v: string) => v } });
   // Supabase ships these roles; create them so the "no access to app" assertions are meaningful.
   await pg.exec('create role anon nologin; create role authenticated nologin;');
   for (const f of migrationFiles()) await pg.exec(readFileSync(join(MIGRATIONS_DIR, f), 'utf8'));

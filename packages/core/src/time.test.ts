@@ -17,20 +17,32 @@ describe('time zones', () => {
   });
 
   it('converts winter and summer local times with the right offset', () => {
-    expect(zonedLocalToUtc('2027-01-10T08:00', 'America/Toronto').toISOString()).toBe('2027-01-10T13:00:00.000Z');
-    expect(zonedLocalToUtc('2027-07-10T08:00', 'America/Toronto').toISOString()).toBe('2027-07-10T12:00:00.000Z');
-    expect(zonedLocalToUtc('2027-07-10T08:00', 'Australia/Sydney').toISOString()).toBe('2027-07-09T22:00:00.000Z');
-    expect(zonedLocalToUtc('2027-07-10T08:00', 'Asia/Kolkata').toISOString()).toBe('2027-07-10T02:30:00.000Z');
+    expect(zonedLocalToUtc('2027-01-10T08:00', 'America/Toronto').toISOString()).toBe(
+      '2027-01-10T13:00:00.000Z',
+    );
+    expect(zonedLocalToUtc('2027-07-10T08:00', 'America/Toronto').toISOString()).toBe(
+      '2027-07-10T12:00:00.000Z',
+    );
+    expect(zonedLocalToUtc('2027-07-10T08:00', 'Australia/Sydney').toISOString()).toBe(
+      '2027-07-09T22:00:00.000Z',
+    );
+    expect(zonedLocalToUtc('2027-07-10T08:00', 'Asia/Kolkata').toISOString()).toBe(
+      '2027-07-10T02:30:00.000Z',
+    );
   });
 
   it('handles the spring-forward gap by moving forward', () => {
     // 2027-03-14 02:30 does not exist in Toronto; clocks jump from 02:00 to 03:00 (EDT, UTC-4).
-    expect(zonedLocalToUtc('2027-03-14T02:30', 'America/Toronto').toISOString()).toBe('2027-03-14T07:30:00.000Z');
+    expect(zonedLocalToUtc('2027-03-14T02:30', 'America/Toronto').toISOString()).toBe(
+      '2027-03-14T07:30:00.000Z',
+    );
   });
 
   it('picks the earlier instant for the ambiguous autumn hour', () => {
     // 2027-11-07 01:30 happens twice in Toronto; the first is EDT (UTC-4) = 05:30Z.
-    expect(zonedLocalToUtc('2027-11-07T01:30', 'America/Toronto').toISOString()).toBe('2027-11-07T05:30:00.000Z');
+    expect(zonedLocalToUtc('2027-11-07T01:30', 'America/Toronto').toISOString()).toBe(
+      '2027-11-07T05:30:00.000Z',
+    );
   });
 
   it('computes the local date of an instant', () => {

@@ -4,6 +4,10 @@ import pg from 'pg';
 import type { DB } from './schema';
 import type { Db } from './tx';
 
+// Calendar dates and local timestamps stay as text: a JS Date would silently apply the server's time zone.
+pg.types.setTypeParser(1082, (v: string) => v); // date
+pg.types.setTypeParser(1114, (v: string) => v); // timestamp without time zone
+
 export function createDb(connectionString: string): Db {
   const pool = new pg.Pool({
     connectionString,
