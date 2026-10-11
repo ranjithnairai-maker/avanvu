@@ -6,3 +6,5 @@ export * from './sports';
 export * from './errors';
 export * from './analytics';
 export * from './crypto';
+export * from './profile';
+export * from './intake';
