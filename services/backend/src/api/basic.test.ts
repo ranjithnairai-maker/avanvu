@@ -69,6 +69,20 @@ describe('GET /v1/sports', () => {
   });
 });
 
+describe('GET /v1/voices', () => {
+  it('lists active voices with signed sample URLs', async () => {
+    await h.db.pg
+      .exec(`insert into app.voice_catalog (id, label, provider_voice_id, wpm, settings_version, sample_path)
+      values ('v_a', 'Voice A', 'p', 100, 's', 'samples/v_a.mp3'), ('v_b', 'Voice B', 'p', 100, 's', null)`);
+    const r = await h.call('GET', '/v1/voices', { userId: USER_A });
+    expect(r.json.voices).toHaveLength(2);
+    expect(r.json.voices[0]).toMatchObject({ id: 'v_a', label: 'Voice A' });
+    expect(r.json.voices[0].sample_url).toMatch(/^memory:\/\/music\/samples\/v_a\.mp3\?exp=/);
+    expect(r.json.voices[1].sample_url).toBeNull();
+    expect(JSON.stringify(r.json)).not.toContain('provider');
+  });
+});
+
 describe('mutations require an Idempotency-Key and a valid body', () => {
   it('rejects a missing or malformed key', async () => {
     const r = await h.call('POST', '/v1/waitlist', {

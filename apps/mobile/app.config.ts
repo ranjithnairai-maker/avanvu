@@ -20,6 +20,7 @@ const config: ExpoConfig = {
     supportsTablet: false,
     bundleIdentifier: process.env.AVANVU_BUNDLE_ID ?? 'com.example.avanvu.dev',
     deploymentTarget: '26.0',
+    usesAppleSignIn: true,
     entitlements: { 'com.apple.developer.declared-age-range': true },
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
@@ -29,6 +30,11 @@ const config: ExpoConfig = {
       'expo-splash-screen',
       { backgroundColor: '#0B0F1A', image: './assets/images/splash-icon.png', imageWidth: 76 },
     ],
+    'expo-secure-store',
+    'expo-localization',
+    'expo-apple-authentication',
+    'expo-background-task',
+    ['expo-notifications', { enableBackgroundRemoteNotifications: false }],
     // Background playback is justified by real session playback (SPEC §12.6).
     ['expo-audio', { enableBackgroundPlayback: true, microphonePermission: false }],
     [

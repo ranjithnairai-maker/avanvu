@@ -334,3 +334,5 @@ export function generationMinimumMissing(profile: AthleteProfile, eventReady: bo
 export function meetsGenerationMinimum(profile: AthleteProfile, eventReady: boolean): boolean {
   return generationMinimumMissing(profile, eventReady).length === 0;
 }
+
+export type MusicStyleName = z.infer<typeof musicStyleSchema>;

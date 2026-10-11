@@ -11,12 +11,15 @@ import {
 import { withUserTx } from '../../db/tx';
 import { allowanceSummary, loadEntitlement } from '../../domain/ledger';
 import { LIMITS } from '../../http/ratelimit';
+import { latestProfile } from '../../domain/profile';
 import { mutate, type AppDeps, type AppEnv } from '../context';
+import { presentEvent, selectEvent, type EventRow } from './events';
 
 export function registerBasicRoutes(api: Hono<AppEnv>, deps: AppDeps): void {
   api.get('/me', async (c) => {
     const userId = c.get('userId');
     const now = deps.now();
+    const sealer = await deps.sealer.forUser(userId); // before any transaction
     const out = await withUserTx(deps.db, userId, async (trx) => {
       const user = await trx
         .selectFrom('app.users')
@@ -25,7 +28,61 @@ export function registerBasicRoutes(api: Hono<AppEnv>, deps: AppDeps): void {
         .executeTakeFirstOrThrow();
       const ent = await loadEntitlement(trx, userId);
       const allowance = await allowanceSummary(trx, userId, ent, now);
+      // The soonest upcoming event, the live interview (if any) and whether a confirmed profile exists: this is
+      // what the app needs on launch to decide where to send the athlete.
+      const eventRow = await selectEvent(trx)
+        .where('user_id', '=', userId)
+        .where('status', '=', 'upcoming')
+        .where('starts_at', '>', now)
+        .orderBy('starts_at')
+        .limit(1)
+        .executeTakeFirst();
+      const program = eventRow
+        ? await trx
+            .selectFrom('app.programs')
+            .select('id')
+            .where('event_id', '=', eventRow.id)
+            .executeTakeFirst()
+        : undefined;
+      const upcoming_event = eventRow
+        ? await presentEvent(sealer, eventRow as unknown as EventRow, program?.id ?? null)
+        : null;
+      const conversation = await trx
+        .selectFrom('app.intake_conversations')
+        .select(['id', 'event_id', 'state'])
+        .where('user_id', '=', userId)
+        .where('state', 'not in', ['SAFETY_INTERRUPTED', 'COMPLETE'])
+        .orderBy('created_at', 'desc')
+        .limit(1)
+        .executeTakeFirst();
+      // An event that has started but has not been debriefed yet: Home offers the debrief (SPEC §8.4).
+      const pastRow = await selectEvent(trx)
+        .where('user_id', '=', userId)
+        .where('status', '=', 'upcoming')
+        .where('starts_at', '<=', now)
+        .where('starts_at', '>', new Date(now.getTime() - 14 * 86_400_000))
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb
+                .selectFrom('app.event_debriefs as d')
+                .select('d.id')
+                .whereRef('d.event_id', '=', 'app.events.id'),
+            ),
+          ),
+        )
+        .orderBy('starts_at', 'desc')
+        .limit(1)
+        .executeTakeFirst();
+      const pending_debrief = pastRow
+        ? await presentEvent(sealer, pastRow as unknown as EventRow, null)
+        : null;
+      const has_profile = !!(await latestProfile(trx, sealer, userId));
       return {
+        upcoming_event,
+        pending_debrief,
+        active_intake: conversation ?? null,
+        has_profile,
         user: {
           analytics_id: user.analytics_id,
           demo_account: user.demo_account,
@@ -43,6 +100,26 @@ export function registerBasicRoutes(api: Hono<AppEnv>, deps: AppDeps): void {
       };
     });
     return c.json(out);
+  });
+
+  // The three curated voices with a short licensed sample each (SPEC §6.1). Samples are served by signed URL.
+  api.get('/voices', async (c) => {
+    const rows = await withUserTx(deps.db, c.get('userId'), (trx) =>
+      trx
+        .selectFrom('app.voice_catalog')
+        .select(['id', 'label', 'sample_path'])
+        .where('active', '=', true)
+        .orderBy('id')
+        .execute(),
+    );
+    const voices = await Promise.all(
+      rows.map(async (v) => ({
+        id: v.id,
+        label: v.label,
+        sample_url: v.sample_path ? await deps.storage.signedUrl('music', v.sample_path, 15 * 60) : null,
+      })),
+    );
+    return c.json({ voices });
   });
 
   api.get('/sports', (c) =>

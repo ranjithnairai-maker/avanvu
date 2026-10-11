@@ -75,7 +75,7 @@ async function insertItems(
 }
 
 /** Selects an event with its local start as text, so no JS time zone parsing ever touches it. */
-const selectEvent = (trx: Tx) =>
+export const selectEvent = (trx: Tx) =>
   trx
     .selectFrom('app.events')
     .select([
@@ -90,7 +90,7 @@ const selectEvent = (trx: Tx) =>
       sql<string>`to_char(starts_local, 'YYYY-MM-DD"T"HH24:MI')`.as('starts_local'),
     ]);
 
-interface EventRow {
+export interface EventRow {
   id: string;
   name_enc: Uint8Array;
   sport_label_enc: Uint8Array | null;
@@ -102,7 +102,7 @@ interface EventRow {
   engine: string;
 }
 
-async function present(sealer: UserSealer, row: EventRow, programId: string | null) {
+export async function presentEvent(sealer: UserSealer, row: EventRow, programId: string | null) {
   return {
     id: row.id,
     name: await sealer.open<string>(nameCtx(row.id), row.name_enc),
@@ -164,7 +164,7 @@ export function registerEventRoutes(api: Hono<AppEnv>, deps: AppDeps): void {
           planProgram({ startsAt, timeZone: body.time_zone, now, trainingDays: body.training_days }),
         );
         const row = await selectEvent(trx).where('id', '=', id).executeTakeFirstOrThrow();
-        return { status: 201, body: await present(sealer, row as unknown as EventRow, program.id) };
+        return { status: 201, body: await presentEvent(sealer, row as unknown as EventRow, program.id) };
       },
     ),
   );
@@ -185,7 +185,7 @@ export function registerEventRoutes(api: Hono<AppEnv>, deps: AppDeps): void {
         .select('id')
         .where('event_id', '=', id)
         .executeTakeFirst();
-      return present(sealer, row as unknown as EventRow, program?.id ?? null);
+      return presentEvent(sealer, row as unknown as EventRow, program?.id ?? null);
     });
     return c.json(out);
   });
@@ -264,7 +264,7 @@ export function registerEventRoutes(api: Hono<AppEnv>, deps: AppDeps): void {
         return {
           status: 200,
           body: {
-            ...(await present(sealer, updated as unknown as EventRow, program?.id ?? null)),
+            ...(await presentEvent(sealer, updated as unknown as EventRow, program?.id ?? null)),
             generated_sessions_unaffected: sessionsAffected,
           },
         };

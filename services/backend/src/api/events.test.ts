@@ -193,3 +193,51 @@ describe('PATCH /v1/events/:id', () => {
     ).toBe(422);
   });
 });
+
+describe('GET /v1/me bootstrap', () => {
+  it('reports the soonest upcoming event, the live interview and whether a profile exists', async () => {
+    const u = '77777777-0000-4000-8000-000000000001';
+    const empty = await h.call('GET', '/v1/me', { userId: u });
+    expect(empty.json).toMatchObject({ upcoming_event: null, active_intake: null, has_profile: false });
+
+    const later = await h.call('POST', '/v1/events', {
+      userId: u,
+      body: body({ name: 'Later race', starts_local: '2026-12-20T08:00' }),
+    });
+    const sooner = await h.call('POST', '/v1/events', {
+      userId: u,
+      body: body({ name: 'Sooner race', starts_local: '2026-11-20T08:00' }),
+    });
+    const conv = await h.call('POST', '/v1/intake/conversations', {
+      userId: u,
+      body: { event_id: sooner.json.id },
+    });
+    const me = await h.call('GET', '/v1/me', { userId: u });
+    expect(me.json.upcoming_event).toMatchObject({
+      id: sooner.json.id,
+      name: 'Sooner race',
+      program_id: sooner.json.program_id,
+    });
+    expect(me.json.active_intake).toMatchObject({ id: conv.json.id, state: 'AWAITING_USER' });
+    expect(me.json.has_profile).toBe(false);
+    expect(later.json.id).not.toBe(sooner.json.id);
+  });
+
+  it('offers the debrief for an event that has started and has not been debriefed', async () => {
+    const u = '77777777-0000-4000-8000-000000000002';
+    const ev = await h.call('POST', '/v1/events', {
+      userId: u,
+      body: body({ name: 'Just ran', starts_local: '2026-12-13T08:00' }),
+    });
+    await h.db.admin.kysely
+      .updateTable('app.events')
+      .set({ starts_at: new Date('2026-10-19T12:00:00Z') })
+      .where('id', '=', ev.json.id)
+      .execute();
+    const me = await h.call('GET', '/v1/me', { userId: u });
+    expect(me.json.upcoming_event).toBeNull();
+    expect(me.json.pending_debrief).toMatchObject({ id: ev.json.id, name: 'Just ran' });
+    await h.db.pg.exec(`update app.events set status = 'completed' where id = '${ev.json.id}'`);
+    expect((await h.call('GET', '/v1/me', { userId: u })).json.pending_debrief).toBeNull();
+  });
+});

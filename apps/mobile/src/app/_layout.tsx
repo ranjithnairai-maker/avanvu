@@ -8,9 +8,12 @@ import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/Toast';
+import { startAuthListener } from '@/lib/auth/store';
+import '@/lib/native/background';
 import { ThemeProvider, useTheme } from '@/theme/theme';
 
 SplashScreen.preventAutoHideAsync();
+startAuthListener();
 
 function Shell() {
   const { colors, scheme } = useTheme();
@@ -19,17 +22,27 @@ function Shell() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
+          headerShown: false,
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.textPrimary,
           headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.bg },
+          animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Avanvu' }} />
-        <Stack.Screen name="gallery" options={{ title: 'Component gallery' }} />
-        <Stack.Screen name="spikes/audio" options={{ title: 'Spike: playback' }} />
-        <Stack.Screen name="spikes/age-range" options={{ title: 'Spike: age range' }} />
-        <Stack.Screen name="spikes/dictation" options={{ title: 'Spike: dictation' }} />
+        <Stack.Screen name="dev/index" options={{ headerShown: true, title: 'Developer tools' }} />
+        <Stack.Screen name="dev/gallery" options={{ headerShown: true, title: 'Component gallery' }} />
+        <Stack.Screen name="dev/spikes/audio" options={{ headerShown: true, title: 'Spike: playback' }} />
+        <Stack.Screen
+          name="dev/spikes/age-range"
+          options={{ headerShown: true, title: 'Spike: age range' }}
+        />
+        <Stack.Screen
+          name="dev/spikes/dictation"
+          options={{ headerShown: true, title: 'Spike: dictation' }}
+        />
+        <Stack.Screen name="safety" options={{ gestureEnabled: false, animation: 'fade' }} />
+        <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );
@@ -37,7 +50,9 @@ function Shell() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Manrope_600SemiBold, Manrope_700Bold });
-  const [client] = useState(() => new QueryClient());
+  const [client] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } }),
+  );
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();

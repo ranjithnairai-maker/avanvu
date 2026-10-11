@@ -64,6 +64,7 @@ export interface IntakeConversationsTable {
   active_seconds: Generated<number>;
   updated_at: Generated<Date>;
   summary_confirmed_at: Ts | null;
+  created_at: Generated<Date>;
 }
 
 export interface IntakeTurnsTable {

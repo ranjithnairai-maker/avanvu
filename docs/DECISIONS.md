@@ -189,9 +189,20 @@ Decision: `AVANVU_ENV=local` uses `DevLlm` (fills fields from the athlete's word
 - [ ] Apple keys: Sign in with Apple key (.p8), DeviceCheck key (D-26), App Store Connect API key for EAS Submit.
 - [ ] Voices and music licences (D-27); content reviewer engaged (D-30); lawyer engaged for SPEC §12.8.
 
+### D-49 to D-54. Mobile build notes (2026-10-11)
+
+- **D-49** The AirPlay route button is omitted from the player for now; the system lock-screen and Control Center routes work. Revisit with the player polish pass.
+- **D-50** No mini-player outside the session screen in v1.
+- **D-51** The bundled backup primer is a placeholder until content is reviewed (D-14, D-30).
+- **D-52** Backup exclusion of session audio is done by a small local Expo module in `apps/mobile/modules/avanvu-backup` (Swift). It is unverified until it runs in an EAS build (checked by M7 step 7.5).
+- **D-53** Sentry and PostHog SDKs are not installed yet. Analytics goes through the allowlisted wrapper, which is a no-op without a key.
+- **D-54** The Pro card gradient is replaced by a flat tint.
+
+
 ---
 
 ## Change log
 
 - 2026-10-11 — Log created from the technical review; D-01 to D-16, D-31, D-32 decided; D-17 to D-30 open with defaults.
 - 2026-10-11 — D-19 decided (North Virginia) after the founder created the production Supabase project in `us-east-1`; D-33 added for the GitHub repository and CI; founder actions updated.
+- 2026-10-11 — D-49 to D-54 added from the mobile build.

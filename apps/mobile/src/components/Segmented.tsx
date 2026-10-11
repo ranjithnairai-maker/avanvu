@@ -8,7 +8,8 @@ import { Text } from './Text';
 
 interface Props<T extends string> {
   options: readonly { value: T; label: string }[];
-  value: T;
+  /** Null shows no selection yet. */
+  value: T | null;
   onChange: (v: T) => void;
 }
 
@@ -17,10 +18,8 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
   const { colors, reduceMotion } = useTheme();
   const [width, setWidth] = useState(0);
   const seg = options.length > 0 ? (width - 8) / options.length : 0;
-  const index = Math.max(
-    0,
-    options.findIndex((o) => o.value === value),
-  );
+  const found = options.findIndex((o) => o.value === value);
+  const index = Math.max(0, found);
   const x = useSharedValue(0);
   x.value = reduceMotion ? index * seg : withSpring(index * seg, motion.spring);
   const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
@@ -48,6 +47,7 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
             backgroundColor: colors.surface,
           },
           thumb,
+          { opacity: found < 0 ? 0 : 1 },
         ]}
       />
       {options.map((o) => (
