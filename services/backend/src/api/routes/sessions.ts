@@ -344,14 +344,12 @@ export function registerSessionRoutes(api: Hono<AppEnv>, deps: AppDeps): void {
             off_enc: off,
           } as never)
           .onConflict((oc) =>
-            oc
-              .column('session_id')
-              .doUpdateSet({
-                vividness: body.vividness,
-                readiness: body.readiness,
-                useful_enc: useful,
-                off_enc: off,
-              } as never),
+            oc.column('session_id').doUpdateSet({
+              vividness: body.vividness,
+              readiness: body.readiness,
+              useful_enc: useful,
+              off_enc: off,
+            } as never),
           )
           .execute();
         return { status: 201, body: { recorded: true } };
