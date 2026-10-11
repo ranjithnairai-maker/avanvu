@@ -251,11 +251,40 @@ export interface MusicCatalogTable {
   active: Generated<boolean>;
 }
 
+export interface ProgramsTable {
+  id: Generated<string>;
+  user_id: string;
+  event_id: string;
+}
+
+export interface ProgramItemsTable {
+  id: Generated<string>;
+  user_id: string;
+  program_id: string;
+  kind: 'training' | 'night_before' | 'primer' | 'debrief';
+  target_date: string;
+  generate_at: Ts | null;
+  state: Generated<'planned' | 'generating' | 'ready' | 'skipped' | 'locked'>;
+  session_id: string | null;
+  core_scene: Json | null;
+}
+
+export interface DevicesTable {
+  id: Generated<string>;
+  user_id: string;
+  push_token: string;
+  platform: Generated<string>;
+  app_version: string | null;
+}
+
 export interface DB {
   'app.users': UsersTable;
   'app.consent_records': ConsentRecordsTable;
   'app.user_data_keys': UserDataKeysTable;
   'app.events': EventsTable;
+  'app.programs': ProgramsTable;
+  'app.program_items': ProgramItemsTable;
+  'app.devices': DevicesTable;
   'app.intake_conversations': IntakeConversationsTable;
   'app.intake_turns': IntakeTurnsTable;
   'app.athlete_profile_drafts': AthleteProfileDraftsTable;
