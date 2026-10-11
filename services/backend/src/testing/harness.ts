@@ -8,6 +8,7 @@ import { createJwtAuthenticator } from '../http/auth';
 import { Idempotency } from '../http/idempotency';
 import { RateLimiter } from '../http/ratelimit';
 import { Logger } from '../observability/logger';
+import { FakeLlm } from '../ports/llm';
 import { DbDataKeyProvider } from '../security/keys';
 import { LocalKms } from '../security/kms';
 import { Sealer } from '../security/seal';
@@ -22,6 +23,7 @@ export interface Harness {
   db: TestDb;
   app: Hono<AppEnv>;
   deps: AppDeps;
+  llm: FakeLlm;
   sealer: Sealer;
   clock: { now: Date };
   logs: string[];
@@ -43,6 +45,7 @@ export interface Harness {
 }
 
 let keyCounter = 0;
+let ipCounter = 0;
 export const newKey = () => `00000000-0000-4000-8000-${String(++keyCounter).padStart(12, '0')}`;
 
 export async function createHarness(opts: { now?: Date } = {}): Promise<Harness> {
@@ -60,6 +63,7 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     FREE_PRIMER_GRANT: 1,
   };
   const now = () => new Date(clock.now);
+  const llm = new FakeLlm();
   const deps: AppDeps = {
     db: db.api,
     sealer,
@@ -68,6 +72,8 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     auth: createJwtAuthenticator({ issuer: ISSUER, keys: createLocalJWKSet({ keys: [jwk] }) }),
     accounts: new AccountGuard(db.api, config, now),
     logger,
+    llm,
+    intakeTimeoutMs: 40_000,
     config,
     now,
   };
@@ -84,7 +90,11 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
       .sign(privateKey);
 
   const call: Harness['call'] = async (method, path, o = {}) => {
-    const headers: Record<string, string> = { ...(o.headers ?? {}) };
+    // Each call comes from a fresh address unless the test pins one, so IP limits stay out of the way.
+    const headers: Record<string, string> = {
+      'x-forwarded-for': `10.${(++ipCounter >> 8) & 255}.${ipCounter & 255}.1`,
+      ...(o.headers ?? {}),
+    };
     const tok = o.token ?? (o.userId ? await token(o.userId) : undefined);
     if (tok) headers.Authorization = `Bearer ${tok}`;
     if (o.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -98,5 +108,5 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     return { status: res.status, json: text ? JSON.parse(text) : null, headers: res.headers };
   };
 
-  return { db, app, deps, sealer, clock, logs, token, call, close: () => db.close() };
+  return { db, app, deps, llm, sealer, clock, logs, token, call, close: () => db.close() };
 }

@@ -4,6 +4,7 @@
  * are applied. Rejection reasons never include athlete or model text.
  */
 import { z } from 'zod';
+import { PHASES, type Phase } from './prompts/intake';
 import {
   FIELD_SPECS,
   type AthleteProfile,
@@ -175,6 +176,8 @@ interface ApplyOptions {
   /** Which source to record; the model path always records `athlete`, summary edits use `edited`. */
   source?: 'athlete' | 'edited';
   rand?: () => number;
+  /** Athlete edits (the summary or profile screen) may re-open a path they skipped; the model never may. */
+  allowSkippedOverride?: boolean;
 }
 
 export interface ApplyResult {
@@ -211,8 +214,12 @@ export function applyProfileUpdates(
     const spec: FieldSpec = FIELD_SPECS[path];
 
     if (profile.field_status[path] === 'skipped') {
-      reject(u, 'path_skipped');
-      continue;
+      if (opts.allowSkippedOverride && u.op !== 'mark_skipped' && u.op !== 'mark_unsure') {
+        delete profile.field_status[path];
+      } else {
+        reject(u, 'path_skipped');
+        continue;
+      }
     }
 
     if (u.op === 'mark_skipped') {
@@ -390,12 +397,9 @@ export type TerminationDecision =
 /** Termination (CONTRACTS §5): a target or cap is reached AND the generation minimum is met. */
 export function checkTermination(input: TerminationInput): TerminationDecision {
   const missingMinimum = generationMinimumMissing(input.profile, input.eventReady);
-  const status = input.profile.field_status;
-  const targetsReached = FIELD_PATHS.every((p) => {
-    if (SENSITIVE_PATHS.includes(p)) return true;
-    const s: FieldStatus | undefined = status[p];
-    return s === 'complete' || s === 'unsure' || s === 'skipped' || isFollowUpExhausted(input.followUps, p);
-  });
+  const targetsReached = TARGET_PATHS.every((p) =>
+    isResolved(input.profile.field_status[p], input.followUps, p),
+  );
   const capReason =
     input.athleteTurns >= TURN_CAP
       ? 'turn_cap'
@@ -413,3 +417,114 @@ export function withStandardReplies(replies: readonly string[], targetPath: Fiel
   const base = replies.filter((r) => r !== 'Skip' && r !== 'Not sure');
   return [...base, extra];
 }
+
+/** Which field paths each interview phase works on (SPEC §4.2). Preferences are a UI step, not interview. */
+export const PHASE_PATHS: Record<Phase, readonly FieldPath[]> = {
+  objective: [
+    'objective.primary',
+    'objective.process_success',
+    'objective.desired_outcome',
+    'objective.why_now',
+  ],
+  sport_event: ['sport.level', 'event.stakes', 'event.venue'],
+  scene: [
+    'scene.visual',
+    'scene.sounds',
+    'scene.weather_temperature',
+    'scene.surface_equipment',
+    'scene.people_context',
+    'scene.smells',
+  ],
+  performance: ['performance.routine', 'performance.key_moments', 'performance.controllables'],
+  obstacles: [
+    'obstacles.hardest_moment',
+    'obstacles.negative_self_talk',
+    'obstacles.disruptors',
+    'obstacles.past_setback',
+  ],
+  response: ['responses.if_then', 'responses.cue_phrase'],
+  identity: ['identity.hoped_self', 'identity.intention', 'identity.feared_self'],
+  outcome: [
+    'outcome.visual',
+    'outcome.body',
+    'outcome.emotion',
+    'outcome.people',
+    'outcome.first_action',
+    'outcome.anchor',
+  ],
+};
+
+/** Optional fields the interview never insists on. */
+const OPTIONAL_PATHS: readonly FieldPath[] = [
+  'objective.desired_outcome',
+  'objective.why_now',
+  'scene.smells',
+];
+
+/**
+ * Fields the interview must resolve before "targets reached". Sensitive and optional fields are asked
+ * when natural but never block the interview; level and anchor have defaults.
+ */
+export const TARGET_PATHS: readonly FieldPath[] = FIELD_PATHS.filter(
+  (p) =>
+    !SENSITIVE_PATHS.includes(p) &&
+    !OPTIONAL_PATHS.includes(p) &&
+    p !== 'sport.level' &&
+    p !== 'outcome.anchor',
+);
+
+export function isResolved(
+  status: FieldStatus | undefined,
+  followUps: FollowUpCounters,
+  path: FieldPath,
+): boolean {
+  return (
+    status === 'complete' ||
+    status === 'unsure' ||
+    status === 'skipped' ||
+    isFollowUpExhausted(followUps, path)
+  );
+}
+
+/** First field in a phase that still needs an answer (not skipped, unsure, complete or follow-up exhausted). */
+export function pickTargetPath(
+  phase: Phase,
+  statuses: Record<string, FieldStatus | undefined>,
+  followUps: FollowUpCounters,
+): FieldPath | null {
+  for (const p of PHASE_PATHS[phase]) {
+    if (OPTIONAL_PATHS.includes(p) && statuses[p] !== 'partial') continue;
+    if (!isResolved(statuses[p], followUps, p)) return p;
+  }
+  return null;
+}
+
+/** The first phase (in interview order, starting at `from`) that still has a pending field. */
+export function nextPendingPhase(
+  statuses: Record<string, FieldStatus | undefined>,
+  followUps: FollowUpCounters,
+  from: Phase = 'objective',
+): Phase | null {
+  const start = PHASES.indexOf(from);
+  for (let i = 0; i < PHASES.length; i++) {
+    const phase = PHASES[(start + i) % PHASES.length] as Phase;
+    if (pickTargetPath(phase, statuses, followUps)) return phase;
+  }
+  return null;
+}
+
+export function exhaustedPaths(followUps: FollowUpCounters): FieldPath[] {
+  return FIELD_PATHS.filter((p) => isFollowUpExhausted(followUps, p));
+}
+
+/** Count of interview phases whose target fields are all resolved. */
+export function phasesResolved(
+  statuses: Record<string, FieldStatus | undefined>,
+  followUps: FollowUpCounters,
+): number {
+  return PHASES.filter((phase) =>
+    PHASE_PATHS[phase].every((p) => !TARGET_PATHS.includes(p) || isResolved(statuses[p], followUps, p)),
+  ).length;
+}
+
+export const PHASE_COUNT_TOTAL = 9; // eight interview phases plus the delivery preferences step

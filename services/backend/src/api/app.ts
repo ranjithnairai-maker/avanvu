@@ -6,6 +6,7 @@ import { LIMITS } from '../http/ratelimit';
 import type { AppDeps, AppEnv } from './context';
 import { registerBasicRoutes } from './routes/basic';
 import { registerEventRoutes } from './routes/events';
+import { registerIntakeRoutes } from './routes/intake';
 
 async function hashSubject(value: string): Promise<string> {
   const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
@@ -65,6 +66,15 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   );
   registerBasicRoutes(api, deps);
   registerEventRoutes(api, deps);
+  registerIntakeRoutes(api, deps, {
+    db: deps.db,
+    sealer: deps.sealer,
+    idem: deps.idem,
+    llm: deps.llm,
+    logger: deps.logger,
+    now: deps.now,
+    intakeTimeoutMs: deps.intakeTimeoutMs,
+  });
   app.route('/v1', api);
   return app;
 }

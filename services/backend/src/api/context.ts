@@ -8,6 +8,7 @@ import type { Authenticator } from '../http/auth';
 import { Idempotency, parseIdempotencyKey, requestHash, type IdempotentResult } from '../http/idempotency';
 import type { LimitSpec, RateLimiter } from '../http/ratelimit';
 import type { Logger } from '../observability/logger';
+import type { LlmClient } from '../ports/llm';
 import type { Sealer, UserSealer } from '../security/seal';
 
 export interface AppDeps {
@@ -18,6 +19,9 @@ export interface AppDeps {
   auth: Authenticator;
   accounts: AccountGuard;
   logger: Logger;
+  llm: LlmClient;
+  /** Server-side timeout for one intake model call (CONTRACTS §4.3 step 6). */
+  intakeTimeoutMs: number;
   config: Pick<
     BackendConfig,
     'PRO_MONTHLY_ALLOWANCE' | 'TRIAL_SESSION_ALLOWANCE' | 'FREE_TRAINING_GRANT' | 'FREE_PRIMER_GRANT'

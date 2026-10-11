@@ -62,6 +62,7 @@ export interface IntakeConversationsTable {
   follow_up_counters: Generated<Json>;
   athlete_turns: Generated<number>;
   active_seconds: Generated<number>;
+  updated_at: Generated<Date>;
   summary_confirmed_at: Ts | null;
 }
 
