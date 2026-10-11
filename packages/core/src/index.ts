@@ -26,3 +26,4 @@ export * from './textutil';
 export * from './fixtures/profile';
 export * from './fixtures/timeline';
 export * from './debrief';
+export * from './notifications';
