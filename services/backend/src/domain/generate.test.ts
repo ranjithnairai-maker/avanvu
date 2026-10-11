@@ -5,10 +5,23 @@ import { NonRetryableJobError, generateTimeline } from './generate';
 
 const models = { script: 'script-model', judge: 'judge-model', effort: 'medium' };
 const profile = fictionalProfile({ fearedSelf: true, skipPeople: true });
-const input = { profile, context: 'training' as const, lengthMin: 15, wpm: 100, coreScene: null, recentCheckins: [] };
+const input = {
+  profile,
+  context: 'training' as const,
+  lengthMin: 15,
+  wpm: 100,
+  coreScene: null,
+  recentCheckins: [],
+};
 const good = () => buildFictionalTimeline(profile, { context: 'training', targetSeconds: 900 });
 const judgeOk = () => ({ checks: JUDGE_CHECK_IDS.map((id) => ({ id, pass: true, note: '' })) });
-const judgeFail = (id: string) => ({ checks: JUDGE_CHECK_IDS.map((c) => ({ id: c, pass: c !== id, note: c === id ? 'Adds a person the athlete did not mention.' : '' })) });
+const judgeFail = (id: string) => ({
+  checks: JUDGE_CHECK_IDS.map((c) => ({
+    id: c,
+    pass: c !== id,
+    note: c === id ? 'Adds a person the athlete did not mention.' : '',
+  })),
+});
 
 describe('script generation', () => {
   it('returns a validated timeline after one script call and one judge call', async () => {
@@ -17,13 +30,23 @@ describe('script generation', () => {
     expect(r.repaired).toBe(false);
     expect(r.usages.map((u) => u.kind)).toEqual(['script', 'judge']);
     expect(r.timeline.context).toBe('training');
-    expect(r.versions).toMatchObject({ schema: 'session_timeline_v1', models: { script: 'script-model' }, repaired: false });
+    expect(r.versions).toMatchObject({
+      schema: 'session_timeline_v1',
+      models: { script: 'script-model' },
+      repaired: false,
+    });
     expect(String(r.versions.prompt)).toMatch(/^script:[0-9a-f]{12}$/);
   });
 
   it('overrides server-owned fields the model tries to set and normalises enum case', async () => {
     const t = good();
-    const sneaky = { ...t, engine: 'closed_skill_v1', target_seconds: 60, context: 'primer', items: t.items.map((i) => ({ ...i, type: i.type.toUpperCase(), block: i.block.toUpperCase() })) };
+    const sneaky = {
+      ...t,
+      engine: 'closed_skill_v1',
+      target_seconds: 60,
+      context: 'primer',
+      items: t.items.map((i) => ({ ...i, type: i.type.toUpperCase(), block: i.block.toUpperCase() })),
+    };
     const llm = new FakeLlm().enqueue('script', sneaky).enqueue('judge', judgeOk());
     const r = await generateTimeline(llm, models, input);
     expect(r.timeline).toMatchObject({ engine: 'endurance_v1', target_seconds: 900, context: 'training' });
@@ -53,7 +76,9 @@ describe('script generation', () => {
   });
 
   it('shares the single repair between validation and the judge: a judge failure then a clean rewrite passes', async () => {
-    const llm = new FakeLlm().enqueue('script', good(), good()).enqueue('judge', judgeFail('no_invented_facts'), judgeOk());
+    const llm = new FakeLlm()
+      .enqueue('script', good(), good())
+      .enqueue('judge', judgeFail('no_invented_facts'), judgeOk());
     const r = await generateTimeline(llm, models, input);
     expect(r.repaired).toBe(true);
     expect(llm.callsFor('script')).toHaveLength(2);
@@ -73,7 +98,9 @@ describe('script generation', () => {
   });
 
   it('fails when the judge rejects the rewrite too', async () => {
-    const llm = new FakeLlm().enqueue('script', good(), good()).enqueue('judge', judgeFail('no_skipped_content'), judgeFail('no_skipped_content'));
+    const llm = new FakeLlm()
+      .enqueue('script', good(), good())
+      .enqueue('judge', judgeFail('no_skipped_content'), judgeFail('no_skipped_content'));
     const err = await generateTimeline(llm, models, input).catch((e) => e);
     expect(err).toBeInstanceOf(NonRetryableJobError);
     expect(err.failedRules).toContain('judge_no_skipped_content');
@@ -96,7 +123,9 @@ describe('script generation', () => {
     bad.items[0] = { ...bad.items[0]!, text: 'You will win, guaranteed. Manifest it.' };
     const llm = new FakeLlm().enqueue('script', bad, bad);
     const err = await generateTimeline(llm, models, input).catch((e) => e);
-    expect(err.failedRules).toEqual(expect.arrayContaining(['banned_manifestation', 'banned_guaranteed_results']));
+    expect(err.failedRules).toEqual(
+      expect.arrayContaining(['banned_manifestation', 'banned_guaranteed_results']),
+    );
     expect(JSON.stringify(err.failedRules)).not.toContain('Manifest it');
   });
 });

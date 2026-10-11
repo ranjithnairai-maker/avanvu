@@ -44,7 +44,11 @@ export interface GenerateResult {
 }
 
 /** Speech share targeted by the writer (the validator allows a wider band). */
-const TARGET_SPEECH_SHARE: Record<SessionContext, number> = { training: 0.6, night_before: 0.55, primer: 0.75 };
+const TARGET_SPEECH_SHARE: Record<SessionContext, number> = {
+  training: 0.6,
+  night_before: 0.55,
+  primer: 0.75,
+};
 
 export class NonRetryableJobError extends Error {
   constructor(
@@ -64,8 +68,14 @@ function normalizeTimeline(raw: unknown): unknown {
       i && typeof i === 'object'
         ? {
             ...i,
-            type: typeof (i as { type?: unknown }).type === 'string' ? (i as { type: string }).type.toLowerCase() : (i as { type?: unknown }).type,
-            block: typeof (i as { block?: unknown }).block === 'string' ? (i as { block: string }).block.toLowerCase() : (i as { block?: unknown }).block,
+            type:
+              typeof (i as { type?: unknown }).type === 'string'
+                ? (i as { type: string }).type.toLowerCase()
+                : (i as { type?: unknown }).type,
+            block:
+              typeof (i as { block?: unknown }).block === 'string'
+                ? (i as { block: string }).block.toLowerCase()
+                : (i as { block?: unknown }).block,
           }
         : i,
     );
@@ -81,7 +91,9 @@ export async function generateTimeline(
 ): Promise<GenerateResult> {
   const { profile, context, lengthMin, wpm } = input;
   const targetSeconds = lengthMin * 60;
-  const wordBudget = Math.round((targetSeconds / 60) * wpm * Math.min(TARGET_SPEECH_SHARE[context], MAX_SPEECH_SHARE[context]));
+  const wordBudget = Math.round(
+    (targetSeconds / 60) * wpm * Math.min(TARGET_SPEECH_SHARE[context], MAX_SPEECH_SHARE[context]),
+  );
   const skipped = FIELD_PATHS.filter((p) => profile.field_status[p] === 'skipped');
   const unsure = FIELD_PATHS.filter((p) => profile.field_status[p] === 'unsure');
   const usages: GenerateResult['usages'] = [];
@@ -162,9 +174,11 @@ export async function generateTimeline(
       attempt = await writeScript(failures);
       failures = attempt.failures;
       if (attempt.timeline && failures.length === 0) failures = await judge(attempt.timeline);
-      if (failures.length > 0 || !attempt.timeline) throw new NonRetryableJobError('VALIDATION_FAILED_AFTER_REPAIR', failures);
+      if (failures.length > 0 || !attempt.timeline)
+        throw new NonRetryableJobError('VALIDATION_FAILED_AFTER_REPAIR', failures);
     }
-    if (!attempt.timeline) throw new NonRetryableJobError('VALIDATION_FAILED_AFTER_REPAIR', ['schema_invalid']);
+    if (!attempt.timeline)
+      throw new NonRetryableJobError('VALIDATION_FAILED_AFTER_REPAIR', ['schema_invalid']);
 
     return {
       timeline: attempt.timeline,
