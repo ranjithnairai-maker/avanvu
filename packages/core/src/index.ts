@@ -15,3 +15,4 @@ export * from './ledger';
 export * from './tts';
 export * from './config';
 export * from './ageAssurance';
+export * from './sensitive';

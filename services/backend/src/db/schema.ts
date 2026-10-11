@@ -85,7 +85,7 @@ export interface AthleteProfileDraftsTable {
   conversation_id: string;
   user_id: string;
   draft_enc: Bytes;
-  updated_at: Ts | undefined;
+  updated_at: Generated<Date>;
 }
 
 export interface AthleteProfileVersionsTable {
@@ -186,14 +186,14 @@ export interface IdempotencyKeysTable {
   response_code: number | null;
   response_enc: Bytes | null;
   created_at: Generated<Date>;
-  expires_at: Ts | undefined;
+  expires_at: Generated<Date>;
 }
 
 export interface RateLimitBucketsTable {
   subject: string;
   limit_name: string;
   tokens: number;
-  updated_at: Ts | undefined;
+  updated_at: Generated<Date>;
 }
 
 export interface VendorUsageTable {
