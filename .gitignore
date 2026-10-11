@@ -6,3 +6,4 @@ node_modules/
 dist/
 eval-results/
 .expo/
+.expo-export/
