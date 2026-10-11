@@ -1,0 +1,27 @@
+{
+  "name": "avanvu",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:db": "echo \"test:db arrives in M2 (needs supabase CLI)\" && exit 0",
+    "eval:smoke": "turbo run eval:smoke",
+    "dev:backend": "echo \"dev:backend arrives in M2\" && exit 0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.12.0",
+    "prettier": "3.9.10",
+    "turbo": "2.11.7",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
+  }
+}
