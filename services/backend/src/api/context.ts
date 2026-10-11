@@ -9,6 +9,9 @@ import { Idempotency, parseIdempotencyKey, requestHash, type IdempotentResult } 
 import type { LimitSpec, RateLimiter } from '../http/ratelimit';
 import type { Logger } from '../observability/logger';
 import type { LlmClient } from '../ports/llm';
+import type { Storage } from '../ports/storage';
+import type { OutboxDispatcher } from '../domain/outbox';
+import type { CostGuard } from '../domain/sessions';
 import type { Sealer, UserSealer } from '../security/seal';
 
 export interface AppDeps {
@@ -20,6 +23,9 @@ export interface AppDeps {
   accounts: AccountGuard;
   logger: Logger;
   llm: LlmClient;
+  storage: Storage;
+  dispatcher: OutboxDispatcher;
+  costGuard: CostGuard;
   /** Server-side timeout for one intake model call (CONTRACTS §4.3 step 6). */
   intakeTimeoutMs: number;
   config: Pick<
@@ -66,7 +72,7 @@ export interface MutationHandlerArgs<B> {
 export async function mutate<S extends ZodType | null>(
   c: Ctx,
   deps: AppDeps,
-  opts: { endpoint: string; schema: S; limit?: LimitSpec },
+  opts: { endpoint: string; schema: S; limit?: LimitSpec; preflight?: () => Promise<void> },
   handler: (
     args: MutationHandlerArgs<S extends ZodType ? z.infer<S> : undefined>,
   ) => Promise<IdempotentResult>,
@@ -82,6 +88,7 @@ export async function mutate<S extends ZodType | null>(
   const result = await deps.idem.run(
     { userId, endpoint: opts.endpoint, key, hash: await requestHash(c.req.method, c.req.path, raw) },
     (trx, sealer) => handler({ trx, body, userId, sealer, now: deps.now() }),
+    opts.preflight ? { preflight: opts.preflight } : {},
   );
   return c.json(result.body as object, result.status as 200);
 }

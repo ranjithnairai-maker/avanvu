@@ -166,11 +166,14 @@ export class Idempotency {
   async run(
     req: IdempotentRequest,
     handler: (trx: Tx, sealer: UserSealer) => Promise<IdempotentResult>,
+    opts: { preflight?: () => Promise<void> } = {},
   ): Promise<IdempotentResult> {
     const sealer = await this.sealer.forUser(req.userId);
     const started = await this.begin(req, sealer);
     if (started.kind === 'replay') return started.result;
     try {
+      // Runs only for new work (never for a replay), outside any transaction.
+      await opts.preflight?.();
       return await withUserTx(this.db, req.userId, async (trx) => {
         const result = await handler(trx, sealer);
         await this.completeInTx(trx, req, result, sealer);

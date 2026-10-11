@@ -9,6 +9,10 @@ import { Idempotency } from '../http/idempotency';
 import { RateLimiter } from '../http/ratelimit';
 import { Logger } from '../observability/logger';
 import { FakeLlm } from '../ports/llm';
+import { MemoryStorage } from '../ports/storage';
+import { InProcessQueue } from '../ports/queue';
+import { OutboxDispatcher } from '../domain/outbox';
+import { CostGuard } from '../domain/sessions';
 import { DbDataKeyProvider } from '../security/keys';
 import { LocalKms } from '../security/kms';
 import { Sealer } from '../security/seal';
@@ -24,6 +28,9 @@ export interface Harness {
   app: Hono<AppEnv>;
   deps: AppDeps;
   llm: FakeLlm;
+  storage: MemoryStorage;
+  queue: InProcessQueue;
+  dispatcher: OutboxDispatcher;
   sealer: Sealer;
   clock: { now: Date };
   logs: string[];
@@ -64,6 +71,10 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
   };
   const now = () => new Date(clock.now);
   const llm = new FakeLlm();
+  const storage = new MemoryStorage(now);
+  const queue = new InProcessQueue();
+  const dispatcher = new OutboxDispatcher(db.api, queue, logger, now);
+  const costGuard = new CostGuard(db.api, 50, now);
   const deps: AppDeps = {
     db: db.api,
     sealer,
@@ -73,6 +84,9 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     accounts: new AccountGuard(db.api, config, now),
     logger,
     llm,
+    storage,
+    dispatcher,
+    costGuard,
     intakeTimeoutMs: 40_000,
     config,
     now,
@@ -108,5 +122,19 @@ export async function createHarness(opts: { now?: Date } = {}): Promise<Harness>
     return { status: res.status, json: text ? JSON.parse(text) : null, headers: res.headers };
   };
 
-  return { db, app, deps, llm, sealer, clock, logs, token, call, close: () => db.close() };
+  return {
+    db,
+    app,
+    deps,
+    llm,
+    storage,
+    queue,
+    dispatcher,
+    sealer,
+    clock,
+    logs,
+    token,
+    call,
+    close: () => db.close(),
+  };
 }

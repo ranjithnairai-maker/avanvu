@@ -279,6 +279,46 @@ export interface DevicesTable {
   app_version: string | null;
 }
 
+export interface SessionPlaysTable {
+  id: Generated<string>;
+  user_id: string;
+  session_id: string;
+  mark: 'start' | '25' | '50' | '80' | '100';
+  position_ms: number;
+  occurred_at: Ts;
+  client_event_id: string;
+}
+
+export interface SessionDownloadsTable {
+  id: Generated<string>;
+  user_id: string;
+  session_id: string;
+  device_id: string | null;
+  sha256: string;
+  bytes: string | number;
+  verified_at: Generated<Date>;
+}
+
+export interface CheckinsTable {
+  id: Generated<string>;
+  user_id: string;
+  session_id: string;
+  vividness: number;
+  readiness: number;
+  useful_enc: Bytes | null;
+  off_enc: Bytes | null;
+  created_at: Generated<Date>;
+}
+
+export interface NotificationDeliveriesTable {
+  id: Generated<string>;
+  user_id: string;
+  kind: string;
+  subject_id: string;
+  status: Generated<'pending' | 'sent' | 'failed' | 'suppressed'>;
+  sent_at: Ts | null;
+}
+
 export interface DB {
   'app.users': UsersTable;
   'app.consent_records': ConsentRecordsTable;
@@ -292,6 +332,10 @@ export interface DB {
   'app.athlete_profile_drafts': AthleteProfileDraftsTable;
   'app.athlete_profile_versions': AthleteProfileVersionsTable;
   'app.sessions': SessionsTable;
+  'app.session_plays': SessionPlaysTable;
+  'app.session_downloads': SessionDownloadsTable;
+  'app.checkins': CheckinsTable;
+  'app.notification_deliveries': NotificationDeliveriesTable;
   'app.session_scripts': SessionScriptsTable;
   'app.render_jobs': RenderJobsTable;
   'app.outbox_events': OutboxEventsTable;

@@ -21,3 +21,4 @@ export * from './api';
 export * from './prompts';
 export * from './safety/messages';
 export * from './jsonschema';
+export * from './sessionState';
