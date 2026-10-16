@@ -200,6 +200,7 @@ Decision: `AVANVU_ENV=local` uses `DevLlm` (fills fields from the athlete's word
 
 - **D-55** The website (`apps/web`, Next.js 16, static pages, no third-party scripts or cookies) ships Privacy and Terms as drafts with a visible notice until `NEXT_PUBLIC_LEGAL_REVIEWED=true` is set after counsel review (SPEC 12.8). The support address comes from `NEXT_PUBLIC_SUPPORT_EMAIL` because it is undecided (D-25). Vercel project root is `apps/web`; the founder creates the project and domain.
 - **D-56** `packages/evals` (`pnpm eval:smoke`, `pnpm eval:full`) runs the safety lexicon, golden-profile script pipeline and renderer suites in replay mode (scripted development model, fake speech, real ffmpeg) and skips the real-model suites (simulated athletes, judge calibration, vendor audio) until the Anthropic and ElevenLabs adapters exist. It is **not yet a CI gate**: the first run found two lexicon gaps (see the 2026-10-11 eval notes) that need the safety reviewer's decision (D-30) before the gate can be turned on.
+- **D-57** Subscriptions use RevenueCat over the platform stores (Apple In-App Purchase now, Google Play Billing if Android ships), not Stripe. Why: store rules require in-app digital subscriptions to use the stores' billing, Stripe cannot process them inside the app, and RevenueCat gives one interface across both stores plus receipt validation, trials, renewals, refunds and restores. Stripe stays a possible later option for web sales only, subject to store steering rules, which must be re-checked then. RevenueCat pricing and store policies change: verify current terms before launch.
 
 ---
 
@@ -210,3 +211,4 @@ Decision: `AVANVU_ENV=local` uses `DevLlm` (fills fields from the athlete's word
 - 2026-10-11 — D-49 to D-54 added from the mobile build.
 - 2026-10-11 — D-55 added for the website.
 - 2026-10-11 — D-56 added for the evals package.
+- 2026-10-16 — D-57 added: RevenueCat over Stripe.
